@@ -4,12 +4,27 @@ import '../helper/network/network_manager.dart';
 import '../models/article.dart';
 import 'my_profile.dart';
 
+// ---------------------------
 // Constants
+// ---------------------------
+
+/// Primary blue theme color used throughout the app.
 const Color kPrimaryBlue = Color(0xFF1976D2);
+
+/// Background color used for article section.
 const Color kArticleListColor = Color(0xFFE8EAF6);
+
+/// API endpoint URL to fetch all articles.
 const String kArticlesApiUrl = "http://dev-reentry.tetrus.dev/core/api/article/all";
+
+/// Base URL for image resources.
 const String kBaseImageUrl = "http://dev-reentry.tetrus.dev/";
 
+/// Dashboard screen — the main landing screen after login.
+///
+/// Displays quick stats (Programs, Appointments, Goals, My Info),
+/// a personalized greeting, articles fetched from backend API,
+/// and a bottom navigation bar for switching between tabs.
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
 
@@ -22,9 +37,9 @@ class _DashboardState extends State<Dashboard> {
   List<Article> _articles = [];
   String? _fetchError;
 
-  int _selectedIndex = 0; // ✅ Track current tab index
+  int _selectedIndex = 0; // Track the current bottom navigation index.
 
-  // Mock counts (replace with real API calls)
+  // Mock counts — these values should be replaced with API-based data.
   int _programCount = 11;
   int _appointmentCount = 5;
   int _goalsCount = 0;
@@ -36,6 +51,16 @@ class _DashboardState extends State<Dashboard> {
     _fetchArticles();
   }
 
+  // ---------------------------------------------------------------------------
+  // DATA FETCHING & API HANDLING
+  // ---------------------------------------------------------------------------
+
+  /// Fetches the list of articles from the remote API endpoint.
+  ///
+  /// - Sets loading state before making the request.
+  /// - Calls the custom `NetworkManager.get()` utility to handle HTTP GET requests.
+  /// - On success, parses the list of articles into `Article` model objects.
+  /// - On failure, stores an error message for display in the UI.
   Future<void> _fetchArticles() async {
     setState(() {
       _isLoading = true;
@@ -64,14 +89,36 @@ class _DashboardState extends State<Dashboard> {
     }
   }
 
+  // ---------------------------------------------------------------------------
+  // EVENT HANDLERS
+  // ---------------------------------------------------------------------------
+
+  /// Handles tap actions when a dashboard tile (Programs, Appointments, etc.) is tapped.
+  ///
+  /// Currently logs the title tapped — can be extended for navigation or action triggers.
   void _onTileTapped(String title) {
     debugPrint('Tapped on: $title');
   }
 
+  /// Handles tap actions when an article is selected.
+  ///
+  /// Currently logs the article title — can be replaced by navigation to a detail screen.
   void _onArticleTapped(String title) {
     debugPrint('Tapped on article: $title');
   }
 
+  // ---------------------------------------------------------------------------
+  // UI BUILDERS — DASHBOARD CARDS
+  // ---------------------------------------------------------------------------
+
+  /// Builds a single dashboard tile widget (e.g., Programs, Appointments).
+  ///
+  /// Displays:
+  /// - Icon on the left
+  /// - Count value on the top-right
+  /// - Title at the bottom
+  ///
+  /// Uses a gradient color background and elevation shadow for visual emphasis.
   Widget _buildTile({
     required String title,
     required IconData icon,
@@ -98,6 +145,7 @@ class _DashboardState extends State<Dashboard> {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: <Widget>[
+            // Top Row: Icon + Count
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -113,6 +161,7 @@ class _DashboardState extends State<Dashboard> {
                 ),
               ],
             ),
+            // Bottom Text: Tile title
             Text(
               title,
               style: const TextStyle(
@@ -128,6 +177,12 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
+  /// Builds the grid layout containing all four main dashboard tiles.
+  ///
+  /// Uses a `GridView.count` with two columns and fixed aspect ratio.
+  ///
+  /// Scrolling is disabled (`NeverScrollableScrollPhysics`) because
+  /// this grid appears inside a parent scroll view.
   Widget _buildMainTiles() {
     return GridView.count(
       physics: const NeverScrollableScrollPhysics(),
@@ -140,32 +195,41 @@ class _DashboardState extends State<Dashboard> {
         _buildTile(
           title: 'Programs',
           icon: Icons.assignment,
-          color: Color(0xFFFC5F2D),
+          color: const Color(0xFFFC5F2D),
           count: _programCount,
-
         ),
         _buildTile(
           title: 'Appointments',
           icon: Icons.calendar_today,
-          color: Color(0xFF06BD76),
+          color: const Color(0xFF06BD76),
           count: _appointmentCount,
         ),
         _buildTile(
           title: 'My Goals',
           icon: Icons.flag,
-          color: Color(0xFF2AC3FF),
+          color: const Color(0xFF2AC3FF),
           count: _goalsCount,
         ),
         _buildTile(
           title: 'My Info',
           icon: Icons.credit_card,
-          color: Color(0xFF7A54FF),
+          color: const Color(0xFF7A54FF),
           count: _infoCount,
         ),
       ],
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // UI BUILDERS — ARTICLES SECTION
+  // ---------------------------------------------------------------------------
+
+  /// Builds the main articles content area.
+  ///
+  /// Handles three states:
+  /// - **Loading:** Shows a progress indicator.
+  /// - **Error:** Displays an error message and retry button.
+  /// - **Success:** Displays a non-scrollable list of articles.
   Widget _buildArticlesListContent() {
     if (_isLoading) return const Center(child: CircularProgressIndicator());
 
@@ -197,6 +261,9 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
+  /// Determines whether to display the article list, error message, or fallback message.
+  ///
+  /// Wraps [_buildArticlesListContent] with appropriate header and layout styling.
   Widget? _buildArticlesList() {
     if (_isLoading) return _buildArticlesListContent();
 
@@ -232,6 +299,13 @@ class _DashboardState extends State<Dashboard> {
     return null;
   }
 
+  /// Builds a single article tile widget.
+  ///
+  /// Each tile contains:
+  /// - Article thumbnail image (fetched from server)
+  /// - Title and a short preview of the article body
+  ///
+  /// Tapping the tile triggers [_onArticleTapped].
   Widget _buildArticleTile(Article article) {
     final logoUrl = '$kBaseImageUrl${article.logoImgBase64}';
 
@@ -242,6 +316,7 @@ class _DashboardState extends State<Dashboard> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Left: Article image
             Container(
               width: 100,
               height: 100,
@@ -262,6 +337,7 @@ class _DashboardState extends State<Dashboard> {
               ),
             ),
             const SizedBox(width: 16),
+            // Right: Text content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -293,6 +369,14 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // UI BUILDERS — STATIC COMPONENTS
+  // ---------------------------------------------------------------------------
+
+  /// Builds the fixed top navigation bar displaying the app name "CareLink"
+  /// and a notification icon.
+  ///
+  /// The app bar remains visible and fixed while the user scrolls content below.
   Widget _buildAppBar() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
@@ -319,6 +403,10 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
+  /// Displays a simple greeting message to the user.
+  ///
+  /// In production, the name (e.g., "Jonathan") can be dynamic
+  /// based on the logged-in user’s profile information.
   Widget _buildGreeting() {
     return const Padding(
       padding: EdgeInsets.only(top: 24.0),
@@ -333,7 +421,15 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
-  // ✅ Bottom navigation bar with tab switching (not push navigation)
+  // ---------------------------------------------------------------------------
+  // UI BUILDERS — BOTTOM NAVIGATION
+  // ---------------------------------------------------------------------------
+
+  /// Builds the persistent bottom navigation bar with four tabs:
+  /// Home, QR Code, Profile, and More.
+  ///
+  /// Highlights the currently active tab and updates `_selectedIndex`
+  /// on tap to switch between pages within the same scaffold.
   Widget _buildBottomNavBar() {
     final items = [
       {'icon': Icons.home, 'label': 'Home'},
@@ -379,6 +475,18 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // UI BUILDERS — MAIN CONTENT
+  // ---------------------------------------------------------------------------
+
+  /// Builds the main home screen layout.
+  ///
+  /// Contains:
+  /// - Fixed top navigation bar (`_buildAppBar`)
+  /// - Scrollable body with greeting, tiles, and articles
+  ///
+  /// Uses `Expanded` + `SingleChildScrollView` to allow
+  /// only the content area to scroll while keeping the top bar fixed.
   Widget _buildHomeContent() {
     final screenWidth = MediaQuery.of(context).size.width;
     const horizontalPadding = 24.0 * 2;
@@ -390,7 +498,7 @@ class _DashboardState extends State<Dashboard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildAppBar(),
+        _buildAppBar(), // Fixed top bar
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -411,6 +519,20 @@ class _DashboardState extends State<Dashboard> {
     );
   }
 
+  // ---------------------------------------------------------------------------
+  // MAIN BUILD METHOD
+  // ---------------------------------------------------------------------------
+
+  /// Builds the root structure of the `Dashboard` screen.
+  ///
+  /// The layout includes:
+  /// - SafeArea with one of four pages (based on `_selectedIndex`)
+  /// - Persistent bottom navigation bar for page switching
+  ///
+  /// Page 0 → Home
+  /// Page 1 → QR Code
+  /// Page 2 → Profile
+  /// Page 3 → More
   @override
   Widget build(BuildContext context) {
     final pages = [

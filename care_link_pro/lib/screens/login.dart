@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-// Import the NetworkManager file
+
+// Import custom helper and network utilities
 import '../helper/helper.dart';
-import '../helper/network/network_manager.dart'; // UPDATED IMPORT PATH
-// Import the Dashboard Screen
+import '../helper/network/network_manager.dart';
+
+// Import the Dashboard Screen (navigated after successful login)
 import 'dashboard.dart';
 
-// Define a custom blue color that closely matches the screenshot's primary color
+/// Primary theme color (used throughout UI)
 const Color kPrimaryBlue = Color(0xFF1976D2);
-// Define both login URLs
+
+/// Base API endpoints for different user types
 const String _fnfLoginUrl = "http://dev-reentry.tetrus.dev/core/mobile/account/fnf/login";
 const String _participantLoginUrl = "http://dev-reentry.tetrus.dev/core/mobile/account/inmate/login";
 
+/// The root entry point of the Flutter app.
+/// Sets the system UI theme and runs the [MyApp] widget.
 void main() {
-  // Ensure the top status bar icons (time, battery) are dark for better contrast
-  // against the light background, matching the screenshot.
+  // Ensure top status bar icons are dark for better contrast
   SystemChrome.setSystemUIOverlayStyle(const SystemUiOverlayStyle(
     statusBarIconBrightness: Brightness.dark,
     statusBarColor: Colors.transparent,
@@ -22,6 +26,11 @@ void main() {
   runApp(const MyApp());
 }
 
+///
+/// Root widget for the entire app.
+///
+/// Defines global theme, color scheme, and base screen ([Login]).
+///
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -31,11 +40,9 @@ class MyApp extends StatelessWidget {
       title: 'CareLink Sign In',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // Set the primary color for widgets like radio buttons and buttons
         primaryColor: kPrimaryBlue,
         colorScheme: ColorScheme.light(primary: kPrimaryBlue),
         scaffoldBackgroundColor: Colors.white,
-        // UPDATED: Changed font family to Poppins
         fontFamily: 'Poppins',
         useMaterial3: true,
       ),
@@ -44,6 +51,22 @@ class MyApp extends StatelessWidget {
   }
 }
 
+///
+/// Main Login Screen for CareLink.
+///
+/// This screen allows two types of users to log in:
+/// - Participant
+/// - Family/Friends (FnF)
+///
+/// Features:
+/// - Username & Password input
+/// - Role selection toggle
+/// - "Remember Me" checkbox
+/// - "Forgot Password" link
+/// - Error dialogs for invalid login attempts
+/// - API integration with NetworkManager
+/// - Navigation to [Dashboard] on success
+///
 class Login extends StatefulWidget {
   const Login({super.key});
 
@@ -52,12 +75,14 @@ class Login extends StatefulWidget {
 }
 
 class _LoginState extends State<Login> {
-  // Controllers to capture text input
+  /// Controllers for capturing input values.
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
 
-  // State variables for interactive elements
+  /// Tracks which type of user is currently selected.
   String _userType = 'Participant';
+
+  /// Local state variables for UI interactivity.
   bool _rememberMe = false;
   bool _isPasswordVisible = false;
   bool _isLoading = false;
@@ -69,7 +94,12 @@ class _LoginState extends State<Login> {
     super.dispose();
   }
 
-  // New helper function to show error popup
+  // ===========================================================================
+  // 🧩 UI HELPER METHODS
+  // ===========================================================================
+
+  /// Displays a popup dialog showing an error message.
+  /// Called when login fails due to validation or API error.
   void _showErrorPopup(String message) {
     showDialog(
       context: context,
@@ -80,9 +110,7 @@ class _LoginState extends State<Login> {
           actions: <Widget>[
             TextButton(
               child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(context).pop(),
             ),
           ],
         );
@@ -90,97 +118,85 @@ class _LoginState extends State<Login> {
     );
   }
 
-  // API Call function
-  void _signIn() async {
-    // Basic input validation
+  /// Handles the login API call based on user type.
+  ///
+  /// Steps:
+  /// 1. Validates that both username and password are entered.
+  /// 2. Builds the correct request body based on user type.
+  /// 3. Calls `NetworkManager.post` with login credentials.
+  /// 4. Saves session info if login is successful.
+  /// 5. Displays popup and debug logs if login fails.
+  Future<void> _signIn() async {
     if (_usernameController.text.isEmpty || _passwordController.text.isEmpty) {
       _showErrorPopup('Please enter both username and password.');
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     String url;
     Map<String, dynamic> loginBody;
 
-    // Determine URL and Body based on user type
+    // Determine API endpoint & body structure
     if (_userType == 'Participant') {
       url = _participantLoginUrl;
       loginBody = {
-        "login": _usernameController.text, // Key changed to 'login'
+        "login": _usernameController.text,
         "password": _passwordController.text,
-        "accept": true, // Added 'accept: true'
+        "accept": true,
       };
     } else {
-      // Family/Friends (default behavior)
       url = _fnfLoginUrl;
       loginBody = {
-        "username": _usernameController.text, // Key remains 'username'
+        "username": _usernameController.text,
         "password": _passwordController.text,
       };
     }
 
+    // Perform POST request
     final result = await NetworkManager.post(url, loginBody);
 
     if (mounted) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
 
       if (result.isSuccess) {
-        // --- START OF NAVIGATION CHANGE ---
-        print('Login Successful! Navigating to Dashboard.');
+        // Login successful — navigate to Dashboard
+        print('✅ Login Successful! Navigating to Dashboard...');
         SharedPreferencesHelper.saveString('login_successfull', _usernameController.text);
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const Dashboard(),
-          ),
+          MaterialPageRoute(builder: (context) => const Dashboard()),
         );
-        // --- END OF NAVIGATION CHANGE ---
       } else {
-        // Handle login failure
+        // Handle structured or unstructured error responses
         String message;
-
         if (result.error is String) {
-          // Case 1: error is a simple string (e.g., network error from NetworkManager)
           message = result.error as String;
         } else if (result.error is Map) {
-          // Case 2: error is a Map (server error object)
           final errorMap = result.error as Map;
-
-          // Prioritize 'message', then look for 'errors' array, then fall back to status.
           String? extractedMessage = errorMap['message']?.toString();
 
           if (extractedMessage == null && errorMap['errors'] is List) {
-            // If 'message' is null, check 'errors' list
             extractedMessage = (errorMap['errors'] as List).join(', ');
           }
 
-          // Assign the final message, defaulting to a comprehensive error if both are null
           message = extractedMessage ?? 'Login failed with status: ${result.status}';
-
-        } else if (result.error != null) {
-          // Case 3: error is a raw Exception object or unexpected dynamic type.
-          // Use toString() defensively to ensure it is always a string.
-          message = result.error.toString();
         } else {
-          // Case 4: result.error is null (shouldn't happen with isSuccess:false, but safe to check)
-          message = 'Unknown login error occurred. Status: ${result.status}';
+          message = result.error?.toString() ?? 'Unknown login error occurred.';
         }
 
-        // Show error message in a popup
         _showErrorPopup(message);
-
-        print('Login Failed: $message');
-        print('Raw Error Object: ${result.error}');
+        print('❌ Login Failed: $message');
       }
     }
   }
 
+  // ===========================================================================
+  // 🧱 WIDGET BUILDERS
+  // ===========================================================================
+
+  /// Builds the entire login screen layout.
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -212,18 +228,20 @@ class _LoginState extends State<Login> {
     );
   }
 
+  /// Builds the top-right settings icon (currently a placeholder).
   Widget _buildSettingsIcon() {
     return Align(
       alignment: Alignment.centerRight,
       child: IconButton(
         icon: const Icon(Icons.settings_outlined, color: Colors.grey, size: 28),
         onPressed: () {
-          // Placeholder for settings action
+          // TODO: Add Settings navigation in future release
         },
       ),
     );
   }
 
+  /// Builds the app logo and screen title ("CareLink" + "Sign in to your Account").
   Widget _buildLogoAndTitle() {
     return Column(
       children: [
@@ -236,27 +254,20 @@ class _LoginState extends State<Login> {
             const SizedBox(width: 4),
             const Text(
               'CareLink',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Colors.black,
-              ),
+              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black),
             ),
           ],
         ),
         const SizedBox(height: 12),
         const Text(
           'Sign in to your Account',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.w500,
-            color: Colors.black87,
-          ),
+          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500, color: Colors.black87),
         ),
       ],
     );
   }
 
+  /// Builds a toggle row with radio buttons for selecting user type.
   Widget _buildRoleSelection() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -268,26 +279,17 @@ class _LoginState extends State<Login> {
     );
   }
 
+  /// Creates an individual radio button for [title].
   Widget _buildRoleRadio(String title) {
     return InkWell(
-      onTap: () {
-        setState(() {
-          _userType = title;
-        });
-      },
+      onTap: () => setState(() => _userType = title),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Radio<String>(
             value: title,
             groupValue: _userType,
-            onChanged: (String? value) {
-              if (value != null) {
-                setState(() {
-                  _userType = value;
-                });
-              }
-            },
+            onChanged: (String? value) => setState(() => _userType = value ?? 'Participant'),
             activeColor: kPrimaryBlue,
           ),
           Text(title, style: const TextStyle(fontSize: 16)),
@@ -296,23 +298,19 @@ class _LoginState extends State<Login> {
     );
   }
 
-  // Linked to _usernameController
+  /// Text field for entering username/login ID.
   Widget _buildUsernameField() {
-    // The placeholder text will dynamically change based on the login field name for clarity.
-    //final hintText = _userType == 'Participant' ? 'Login ID' : 'Username';
-    final hintText = 'Username';
-
     return TextField(
       controller: _usernameController,
       decoration: InputDecoration(
-        labelText: hintText,
+        labelText: 'Username',
         border: const OutlineInputBorder(borderRadius: BorderRadius.all(Radius.circular(8.0))),
         contentPadding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 16.0),
       ),
     );
   }
 
-  // Linked to _passwordController
+  /// Text field for entering password, with toggle visibility button.
   Widget _buildPasswordField() {
     return TextField(
       controller: _passwordController,
@@ -326,16 +324,13 @@ class _LoginState extends State<Login> {
             _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
             color: Colors.black54,
           ),
-          onPressed: () {
-            setState(() {
-              _isPasswordVisible = !_isPasswordVisible;
-            });
-          },
+          onPressed: () => setState(() => _isPasswordVisible = !_isPasswordVisible),
         ),
       ),
     );
   }
 
+  /// Builds the row containing the "Remember Me" checkbox and "Forgot Password" link.
   Widget _buildOptionsRow() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -348,11 +343,7 @@ class _LoginState extends State<Login> {
               height: 24,
               child: Checkbox(
                 value: _rememberMe,
-                onChanged: (bool? value) {
-                  setState(() {
-                    _rememberMe = value ?? false;
-                  });
-                },
+                onChanged: (bool? value) => setState(() => _rememberMe = value ?? false),
                 activeColor: kPrimaryBlue,
               ),
             ),
@@ -362,31 +353,26 @@ class _LoginState extends State<Login> {
         ),
         TextButton(
           onPressed: () {
-            // Placeholder for navigation to Forgot Password screen
+            // TODO: Implement forgot password navigation
           },
           child: const Text(
             'Forgot Password?',
-            style: TextStyle(
-              color: kPrimaryBlue,
-              fontWeight: FontWeight.w600,
-              fontSize: 14,
-            ),
+            style: TextStyle(color: kPrimaryBlue, fontWeight: FontWeight.w600, fontSize: 14),
           ),
         ),
       ],
     );
   }
 
-  // Calls the _signIn function
+  /// Builds the primary "Sign In" button.
+  /// Triggers the [_signIn] method when pressed.
   Widget _buildSignInButton() {
     return ElevatedButton(
-      onPressed: _isLoading ? null : _signIn, // Disable button while loading
+      onPressed: _isLoading ? null : _signIn,
       style: ElevatedButton.styleFrom(
         backgroundColor: kPrimaryBlue,
         padding: const EdgeInsets.symmetric(vertical: 16.0),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8.0),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
         elevation: 0,
       ),
       child: _isLoading
@@ -400,15 +386,12 @@ class _LoginState extends State<Login> {
       )
           : const Text(
         'Sign in',
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-        ),
+        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
       ),
     );
   }
 
+  /// Builds footer with signup link displayed at the bottom of the login page.
   Widget _buildFooter(BuildContext context) {
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom + 16.0),
@@ -421,15 +404,11 @@ class _LoginState extends State<Login> {
           ),
           TextButton(
             onPressed: () {
-              // Placeholder for navigation to Sign Up screen
+              // TODO: Implement signup navigation
             },
             child: const Text(
               'Signup',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: kPrimaryBlue,
-              ),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: kPrimaryBlue),
             ),
           ),
         ],
