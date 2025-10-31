@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 // Import custom helper and network utilities
 import '../helper/helper.dart';
 import '../helper/network/network_manager.dart';
+import '../models/login.dart';
 
 // Import the Dashboard Screen (navigated after successful login)
 import 'dashboard.dart';
@@ -160,13 +161,24 @@ class _LoginState extends State<Login> {
       setState(() => _isLoading = false);
 
       if (result.isSuccess) {
+
+        var loginDetails = LoginDetails.fromJson(result.data);
+
+        SharedPreferencesHelper.saveString('token',loginDetails.idToken);
+        SharedPreferencesHelper.saveString('refresh_token',loginDetails.refreshToken);
+
+        print(loginDetails.idToken);
+
         // Login successful — navigate to Dashboard
+        print(result.data.toString());
         print('✅ Login Successful! Navigating to Dashboard...');
         SharedPreferencesHelper.saveString('login_successfull', _usernameController.text);
 
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const Dashboard()),
+          MaterialPageRoute(
+            builder: (context) => Dashboard(loginDetails: loginDetails),
+          ),
         );
       } else {
         // Handle structured or unstructured error responses

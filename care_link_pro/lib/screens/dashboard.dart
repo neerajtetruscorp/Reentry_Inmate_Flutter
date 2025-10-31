@@ -4,6 +4,7 @@ import 'package:http/http.dart';
 import '../helper/network/network_manager.dart';
 import '../models/article.dart';
 import '../models/dashboard_tiles_count.dart';
+import '../models/login.dart';
 import 'more.dart';
 import 'my_profile.dart';
 
@@ -26,19 +27,23 @@ const String kCountApiUrl = "http://dev-reentry.tetrus.dev/inmate-svc/api/inmate
 /// Base URL for image resources.
 const String kBaseImageUrl = "http://dev-reentry.tetrus.dev/";
 
+final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
+
 /// Dashboard screen — the main landing screen after login.
 ///
 /// Displays quick stats (Programs, Appointments, Goals, My Info),
 /// a personalized greeting, articles fetched from backend API,
 /// and a bottom navigation bar for switching between tabs.
 class Dashboard extends StatefulWidget {
-  const Dashboard({super.key});
+  final LoginDetails? loginDetails; // ✅ nullable type
+
+  const Dashboard({Key? key, required this.loginDetails}) : super(key: key);
 
   @override
   State<Dashboard> createState() => _DashboardState();
 }
 
-class _DashboardState extends State<Dashboard> {
+class _DashboardState extends State<Dashboard> with RouteAware {
   bool _isLoading = true;
   List<Article> _articles = [];
   String? _fetchError;
@@ -57,6 +62,31 @@ class _DashboardState extends State<Dashboard> {
     _fetchArticles();
     _tilesCounts();
   }
+
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route is PageRoute) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+  // Called when the user returns to this screen
+  @override
+  void didPopNext() {
+    print('🔄 Dashboard became visible again, refreshing data...');
+    _fetchArticles();
+    _tilesCounts();
+  }
+
 
   // ---------------------------------------------------------------------------
   // DATA FETCHING & API HANDLING
@@ -79,7 +109,8 @@ class _DashboardState extends State<Dashboard> {
       if (mounted) {
         if (result.isSuccess && result.data is List) {
 
-          
+
+          print(result.data.toString());
           _articles = (result.data as List)
               .map((json) => Article.fromJson(json))
               .toList();
@@ -111,6 +142,7 @@ class _DashboardState extends State<Dashboard> {
         if (result.isSuccess && result.data is Map<String, dynamic>) {
           var dashboardTilesCount = DashboardTilesCount.fromJson(result.data);
 
+          print(result.data.toString());
           setState(() {
             _programCount = dashboardTilesCount.programsCount;
             _appointmentCount = dashboardTilesCount.upcomingEventsCount;
@@ -500,7 +532,15 @@ class _DashboardState extends State<Dashboard> {
           final color = isActive ? kPrimaryBlue : Colors.grey.shade600;
 
           return InkWell(
-            onTap: () => setState(() => _selectedIndex = index),
+            onTap: () {
+              setState(() => _selectedIndex = index);
+
+              // ✅ Refresh data when returning to Home tab
+              if (index == 0) {
+                _fetchArticles();
+                _tilesCounts();
+              }
+            },
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [

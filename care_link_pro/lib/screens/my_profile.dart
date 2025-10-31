@@ -45,6 +45,8 @@ class MyProfileScreen extends StatelessWidget {
               onPressed: () async {
                 // Remove login flag
                 await SharedPreferencesHelper.deleteString('login_successfull');
+                await SharedPreferencesHelper.deleteString('token');
+
 
                 Navigator.of(dialogContext).pop(); // Close dialog
 

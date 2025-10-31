@@ -1,9 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../helper.dart';
 
-// 1. API Response Model
-// CRITICAL FIX: The 'error' field is now 'dynamic' to correctly handle both
-// simple strings (network failures) and complex error Maps (server responses).
 class ApiResponse {
   final bool isSuccess;
   final dynamic error;
@@ -17,11 +15,9 @@ class ApiResponse {
     required this.status,
   });
 
-  // Factory constructor to create an ApiResponse from the server's JSON map
   factory ApiResponse.fromJson(Map<String, dynamic> json) {
     return ApiResponse(
       isSuccess: json['isSuccess'] ?? false,
-      // This correctly handles the 'error' field, regardless of whether it's null, a string, or a map.
       error: json['error'],
       data: json['data'],
       status: json['status']?.toString() ?? 'UNKNOWN',
@@ -34,24 +30,102 @@ class ApiResponse {
   }
 }
 
-// 2. Network Manager Class
 class NetworkManager {
-  // Standard headers, crucial for JSON requests
-  static const Map<String, String> _headers = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
+  // Your login endpoint — token check will be skipped for this URL
+  static const String _loginUrl = "http://dev-reentry.tetrus.dev/core/mobile/account/inmate/login"; // 🔹 Change this
+  static const String _articleUrl = "http://dev-reentry.tetrus.dev/core/api/article/all"; // 🔹 Change this
 
-  // Static method to handle GET requests
+  // Base method to ensure token validity
+  static Future<bool> _checkAuthToken() async {
+    final token = await SharedPreferencesHelper.getString('token');
+    final refreshToken = await SharedPreferencesHelper.getString('refresh_token');
+    final expireTime = await SharedPreferencesHelper.getInt('expire');
+
+    final currentTime = DateTime.now().millisecondsSinceEpoch;
+
+    if (token == null || token.isEmpty) {
+      print('⚠️ No token found, fetching new token...');
+      return await _getAuthToken(refreshToken);
+    }
+
+    if (expireTime != null && currentTime > expireTime) {
+      print('⏰ Token expired, refreshing...');
+      return await _getAuthToken(refreshToken);
+    }
+
+    print('✅ Token is valid.');
+    return true;
+  }
+
+  // Function to fetch new tokens using refreshToken (similar to Swift getAuthToken)
+  static Future<bool> _getAuthToken(String? refreshToken) async {
+    if (refreshToken == null || refreshToken.isEmpty) {
+      print('❌ No refresh token available');
+      return false;
+    }
+
+    final url = "https://yourdomain.com/api/refreshToken"; // 🔹 Replace with your actual refresh endpoint
+    final params = {"refreshToken": refreshToken};
+
+    try {
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: jsonEncode(params),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        print('🔁 Token refreshed successfully: $data');
+
+        await SharedPreferencesHelper.saveString('token', data['idToken']);
+        await SharedPreferencesHelper.saveString('refresh_token', data['refreshToken']);
+        await SharedPreferencesHelper.saveInt('expire', data['expire']); // in milliseconds
+
+        return true;
+      } else {
+        print('❌ Failed to refresh token: ${response.statusCode}');
+        return false;
+      }
+    } catch (e) {
+      print('❌ Token refresh failed: $e');
+      return false;
+    }
+  }
+
+  // -------------------------------
+  // Dynamic Header Builder
+  // -------------------------------
+  static Future<Map<String, String>> _headers() async {
+    final headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    };
+
+    final token = await SharedPreferencesHelper.getString('token');
+    if (token != null && token.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $token';
+    }
+    return headers;
+  }
+
+  // -------------------------------
+  // GET Request
+  // -------------------------------
   static Future<ApiResponse> get(String url) async {
     try {
-      final response = await http.get(
-        Uri.parse(url),
-        headers: _headers,
-      );
+      if (url != _articleUrl) {
+        await _checkAuthToken(); // 🔹 Only skip for login
+      }
+
+      print(url);
+      final headers = await _headers();
+      final response = await http.get(Uri.parse(url), headers: headers);
       return _handleResponse(response);
     } catch (e) {
-      // Handles network errors (no internet, DNS lookup failed, etc.)
       return ApiResponse(
         isSuccess: false,
         error: 'Network request failed: $e',
@@ -61,19 +135,23 @@ class NetworkManager {
     }
   }
 
-  // Static method to handle POST requests
-  static Future<ApiResponse> post(
-      String url, Map<String, dynamic> params) async {
+  // -------------------------------
+  // POST Request
+  // -------------------------------
+  static Future<ApiResponse> post(String url, Map<String, dynamic> params) async {
     try {
+      if (url != _loginUrl) {
+        await _checkAuthToken(); // 🔹 Only skip for login
+      }
+
+      final headers = await _headers();
       final response = await http.post(
         Uri.parse(url),
-        headers: _headers,
-        // Convert the map of parameters into a JSON string for the body
+        headers: headers,
         body: jsonEncode(params),
       );
       return _handleResponse(response);
     } catch (e) {
-      // Handles network errors (no internet, DNS lookup failed, etc.)
       return ApiResponse(
         isSuccess: false,
         error: 'Network request failed: $e',
@@ -83,37 +161,28 @@ class NetworkManager {
     }
   }
 
-  // 3. Private Response Handler
+  // -------------------------------
+  // Handle Response
+  // -------------------------------
   static ApiResponse _handleResponse(http.Response response) {
-    dynamic decodedBody;
     try {
-      // Attempt to decode the response body
-      decodedBody = jsonDecode(response.body);
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return ApiResponse.fromJson(decoded);
+      } else {
+        return ApiResponse(
+          isSuccess: false,
+          error: 'Invalid response structure',
+          status: response.statusCode.toString(),
+          data: decoded,
+        );
+      }
     } catch (e) {
-      // Failed to decode JSON (e.g., HTML response, empty body, or invalid JSON)
-      // This is considered a failure as it doesn't match the expected API structure.
       return ApiResponse(
         isSuccess: false,
-        error: 'Response body is not valid JSON. Status Code: ${response.statusCode}',
+        error: 'Failed to decode response: $e',
         status: response.statusCode.toString(),
-        data: response.body, // The raw body is useful for debugging
-      );
-    }
-
-    // Ensure the decoded body is a Map before trying to parse it as ApiResponse
-    if (decodedBody is Map<String, dynamic>) {
-      // Use the standard parser. Since ApiResponse.fromJson is designed to handle
-      // the server's standard structure (isSuccess, error, data), we use it
-      // regardless of the HTTP status code.
-      return ApiResponse.fromJson(decodedBody);
-
-    } else {
-      // Handles cases where the response body is valid JSON but not a top-level Map
-      return ApiResponse(
-        isSuccess: false,
-        error: 'Server response is valid JSON but not a top-level object.',
-        status: response.statusCode.toString(),
-        data: decodedBody,
+        data: response.body,
       );
     }
   }
