@@ -1,17 +1,21 @@
 import 'package:flutter/material.dart';
-// Assuming Login screen is defined in main.dart, located one directory up.
-// This line needs to be adjusted based on your actual file structure.
 import '../helper/helper.dart';
 import '../main.dart';
 import 'login.dart';
 
-// Define a custom blue color (must be defined in every file if not using a theme/constants file)
+/// Define a custom blue color for consistent styling
 const Color kPrimaryBlue = Color(0xFF1976D2);
 
+/// MyProfileScreen — Displays the user's profile details and account settings.
 class MyProfileScreen extends StatelessWidget {
-  const MyProfileScreen({super.key});
+  final VoidCallback onBackToHome; // ✅ Callback to switch back to home tab
 
-  // Helper function to show logout confirmation popup
+
+
+  const MyProfileScreen({super.key, required this.onBackToHome});
+
+
+  /// Show a logout confirmation dialog
   void _showLogoutConfirmation(BuildContext context) {
     showDialog(
       context: context,
@@ -38,14 +42,13 @@ class MyProfileScreen extends StatelessWidget {
             ),
             // YES button
             TextButton(
-              onPressed: () {
+              onPressed: () async {
+                // Remove login flag
+                await SharedPreferencesHelper.deleteString('login_successfull');
 
-                 SharedPreferencesHelper.deleteString('login_successfull');
+                Navigator.of(dialogContext).pop(); // Close dialog
 
-                // Dismiss popup
-                Navigator.of(dialogContext).pop();
-
-                // Navigate back to the Login screen and remove all other routes
+                // Navigate to Login screen and clear all routes
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (context) => const Login()),
@@ -63,7 +66,7 @@ class MyProfileScreen extends StatelessWidget {
     );
   }
 
-  // Helper widget for profile menu items
+  /// Widget builder for a single profile option
   Widget _buildProfileOption({
     required BuildContext context,
     required IconData icon,
@@ -75,6 +78,7 @@ class MyProfileScreen extends StatelessWidget {
       children: [
         InkWell(
           onTap: onTap,
+          borderRadius: BorderRadius.circular(8),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 16.0),
             child: Row(
@@ -91,7 +95,7 @@ class MyProfileScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (title != 'Logout') // Optional: show arrow for navigation items
+                if (title != 'Logout')
                   const Icon(Icons.arrow_forward_ios, color: Colors.grey, size: 16),
               ],
             ),
@@ -105,19 +109,18 @@ class MyProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Placeholder image URL
+    // Temporary profile image (replace with real user photo later)
     const String profileImageUrl =
         "https://placehold.co/120x120/000000/ffffff?text=JM";
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.transparent, // No background color
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
-          onPressed: () {
-            Navigator.pop(context); // Go back to the Dashboard
-          },
+          tooltip: 'Back to Home',
+          onPressed: () => onBackToHome(),
         ),
         title: const Text(
           'My Profile',
@@ -129,7 +132,7 @@ class MyProfileScreen extends StatelessWidget {
         ),
         centerTitle: true,
         actions: const [
-          // Notification icon placeholder (matches Dashboard)
+          // Notification bell (optional)
           Padding(
             padding: EdgeInsets.only(right: 16.0),
             child: Stack(
@@ -148,12 +151,14 @@ class MyProfileScreen extends StatelessWidget {
           ),
         ],
       ),
+
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: <Widget>[
             const SizedBox(height: 32),
+
             // Profile Picture
             Center(
               child: Container(
@@ -164,21 +169,22 @@ class MyProfileScreen extends StatelessWidget {
                   border: Border.all(color: Colors.grey.shade300, width: 2),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.grey.withOpacity(0.5),
+                      color: Colors.grey.withOpacity(0.4),
                       spreadRadius: 2,
-                      blurRadius: 7,
+                      blurRadius: 6,
                       offset: const Offset(0, 3),
                     ),
                   ],
-                  // In a real app, this would use CachedNetworkImage or a local asset
-                  image: DecorationImage(
+                  image: const DecorationImage(
                     image: NetworkImage(profileImageUrl),
                     fit: BoxFit.cover,
                   ),
                 ),
               ),
             ),
+
             const SizedBox(height: 16),
+
             // User Name
             const Center(
               child: Text(
@@ -190,33 +196,32 @@ class MyProfileScreen extends StatelessWidget {
                 ),
               ),
             ),
+
             const SizedBox(height: 48),
 
-            // Profile Options Menu
+            // Profile Options
             _buildProfileOption(
               context: context,
               icon: Icons.person_outline,
               title: 'Personal Information',
               onTap: () {
-                print('Navigate to Personal Information');
+                debugPrint('Navigate to Personal Information');
               },
-              showDivider: true,
             ),
             _buildProfileOption(
               context: context,
               icon: Icons.vpn_key_outlined,
               title: 'Change Password',
               onTap: () {
-                print('Navigate to Change Password');
+                debugPrint('Navigate to Change Password');
               },
-              showDivider: true,
             ),
             _buildProfileOption(
               context: context,
               icon: Icons.logout,
               title: 'Logout',
               onTap: () => _showLogoutConfirmation(context),
-              showDivider: false, // Last item usually doesn't need a divider
+              showDivider: false,
             ),
           ],
         ),

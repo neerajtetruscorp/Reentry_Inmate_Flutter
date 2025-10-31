@@ -1,7 +1,10 @@
+import 'package:care_link_pro/screens/scan_generate.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import '../helper/network/network_manager.dart';
 import '../models/article.dart';
+import '../models/dashboard_tiles_count.dart';
+import 'more.dart';
 import 'my_profile.dart';
 
 // ---------------------------
@@ -16,6 +19,9 @@ const Color kArticleListColor = Color(0xFFE8EAF6);
 
 /// API endpoint URL to fetch all articles.
 const String kArticlesApiUrl = "http://dev-reentry.tetrus.dev/core/api/article/all";
+
+/// API endpoint URL to fetch all counts.
+const String kCountApiUrl = "http://dev-reentry.tetrus.dev/inmate-svc/api/inmateprogram/allCount/encounterId/235/inmateId/39f7798b-d185-4cd1-ad34-bfa077bfe45b";
 
 /// Base URL for image resources.
 const String kBaseImageUrl = "http://dev-reentry.tetrus.dev/";
@@ -40,8 +46,8 @@ class _DashboardState extends State<Dashboard> {
   int _selectedIndex = 0; // Track the current bottom navigation index.
 
   // Mock counts — these values should be replaced with API-based data.
-  int _programCount = 11;
-  int _appointmentCount = 5;
+  int _programCount = 0;
+  int _appointmentCount = 0;
   int _goalsCount = 0;
   int _infoCount = 0;
 
@@ -49,6 +55,7 @@ class _DashboardState extends State<Dashboard> {
   void initState() {
     super.initState();
     _fetchArticles();
+    _tilesCounts();
   }
 
   // ---------------------------------------------------------------------------
@@ -71,6 +78,8 @@ class _DashboardState extends State<Dashboard> {
       final result = await NetworkManager.get(kArticlesApiUrl);
       if (mounted) {
         if (result.isSuccess && result.data is List) {
+
+          
           _articles = (result.data as List)
               .map((json) => Article.fromJson(json))
               .toList();
@@ -88,6 +97,45 @@ class _DashboardState extends State<Dashboard> {
       }
     }
   }
+
+  Future<void> _tilesCounts() async {
+    setState(() {
+      _isLoading = true;
+      _fetchError = null;
+    });
+
+    try {
+      final result = await NetworkManager.get(kCountApiUrl);
+
+      if (mounted) {
+        if (result.isSuccess && result.data is Map<String, dynamic>) {
+          var dashboardTilesCount = DashboardTilesCount.fromJson(result.data);
+
+          setState(() {
+            _programCount = dashboardTilesCount.programsCount;
+            _appointmentCount = dashboardTilesCount.upcomingEventsCount;
+          });
+        } else {
+          setState(() {
+            _fetchError = result.error?.toString() ?? 'Failed to load dashboard data.';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _fetchError = 'Network error: $e';
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
 
   // ---------------------------------------------------------------------------
   // EVENT HANDLERS
@@ -537,9 +585,15 @@ class _DashboardState extends State<Dashboard> {
   Widget build(BuildContext context) {
     final pages = [
       _buildHomeContent(),
-      const Center(child: Text("QR Code Screen")),
-      const MyProfileScreen(),
-      const Center(child: Text("More Screen")),
+      ScanAndGenerateScreen(onBackToHome: () {
+        setState(() => _selectedIndex = 0); // ✅ Go back to Home tab
+      }),
+      MyProfileScreen(onBackToHome: () {
+        setState(() => _selectedIndex = 0); // ✅ Go back to Home tab
+      }),
+      MoreScreen(onBackToHome: () {
+        setState(() => _selectedIndex = 0); // ✅ Go back to Home tab
+      }),
     ];
 
     return Scaffold(
