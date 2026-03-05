@@ -230,27 +230,43 @@ class _DashboardState extends State<Dashboard> with RouteAware {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Icon(icon, color: Colors.white, size: 30),
-                Text(
-                  count.toString().padLeft(2, '0'),
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    color: Colors.white,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+                (title == 'My Goals' || title == 'My Info') && count == 0
+                    ? const SizedBox.shrink()
+                    : Text(
+                        count.toString(),
+                        style: const TextStyle(
+                          fontFamily: 'Poppins',
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
               ],
             ),
             // Bottom Text: Tile title
-            Text(
-              title,
-              style: const TextStyle(
-                fontFamily: 'Poppins',
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.normal,
+            if (title == 'My Goals' || title == 'My Info' || title == 'Programs' || title == 'Appointments')
+              Padding(
+                padding: const EdgeInsets.only(bottom: 20.0),
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    fontFamily: 'Poppins',
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.normal,
+                  ),
+                ),
+              )
+            else
+              Text(
+                title,
+                style: const TextStyle(
+                  fontFamily: 'Poppins',
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.normal,
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -461,23 +477,20 @@ class _DashboardState extends State<Dashboard> with RouteAware {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 8.0),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Row(children: [
-            Icon(Icons.link, color: kPrimaryBlue, size: 28),
-            const SizedBox(width: 4),
-            Icon(Icons.favorite, color: Colors.red.shade700, size: 20),
-            const SizedBox(width: 4),
-            const Text(
-              'CareLink',
-              style: TextStyle(
-                fontFamily: 'Poppins',
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+          Expanded(child: SizedBox()),
+          Image.network(
+            'http://dev-reentry.tetrus.dev/agency-svc/api/agencyConfiguration/logoImage',
+            height: 32,
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) => Icon(Icons.link, color: kPrimaryBlue, size: 28),
+          ),
+          Expanded(
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: const Icon(Icons.notifications_none, size: 28),
             ),
-          ]),
-          const Icon(Icons.notifications_none, size: 28),
+          ),
         ],
       ),
     );

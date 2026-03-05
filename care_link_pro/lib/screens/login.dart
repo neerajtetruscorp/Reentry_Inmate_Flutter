@@ -260,13 +260,12 @@ class _LoginState extends State<Login> {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.link, color: kPrimaryBlue, size: 28),
-            const SizedBox(width: 2),
-            Icon(Icons.favorite, color: Colors.red.shade700, size: 20),
-            const SizedBox(width: 4),
-            const Text(
-              'CareLink',
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black),
+            Image.network(
+              'http://dev-reentry.tetrus.dev/agency-svc/api/agencyConfiguration/logoImage',
+              height: 32,
+              fit: BoxFit.contain,
+              // Fallback to a simple icon if the image fails to load
+              errorBuilder: (context, error, stackTrace) => Icon(Icons.link, color: kPrimaryBlue, size: 28),
             ),
           ],
         ),
