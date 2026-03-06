@@ -1,0 +1,25 @@
+class Progress {
+  String? goalStatus;
+  String? shortTermStatus;
+  int? totalEventsCount;
+  int? completedCount;
+  int? missedCount;
+
+  Progress({
+    this.goalStatus,
+    this.shortTermStatus,
+    this.totalEventsCount,
+    this.completedCount,
+    this.missedCount,
+  });
+
+  factory Progress.fromJson(Map<String, dynamic> json) {
+    return Progress(
+      goalStatus: json['goalStatus']?.toString(),
+      shortTermStatus: json['shortTermStatus']?.toString(),
+      totalEventsCount: json['totalEventsCount']?.toInt(),
+      completedCount: json['completedCount']?.toInt(),
+      missedCount: json['missedCount']?.toInt()
+    );
+  }
+}

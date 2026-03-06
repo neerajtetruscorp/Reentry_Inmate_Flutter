@@ -166,6 +166,7 @@ class _LoginState extends State<Login> {
 
         SharedPreferencesHelper.saveString('token',loginDetails.idToken);
         SharedPreferencesHelper.saveString('refresh_token',loginDetails.refreshToken);
+        SharedPreferencesHelper.saveInt('expire', loginDetails.expire);
 
         print(loginDetails.idToken);
 

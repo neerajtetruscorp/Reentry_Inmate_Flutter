@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'screens/login.dart';
 import 'screens/dashboard.dart';
 import 'helper/helper.dart'; // ✅ fixed path
@@ -16,7 +17,13 @@ class MyApp extends StatelessWidget {
       title: 'CareLink Pro',
       debugShowCheckedModeBanner: false,
 
-      // 👇 Add navigatorObservers here — at MaterialApp level
+      // ✅ Apply Poppins font globally
+      theme: ThemeData(
+        textTheme: GoogleFonts.poppinsTextTheme(),
+        primaryTextTheme: GoogleFonts.poppinsTextTheme(),
+      ),
+
+      // 👇 Navigator observer
       navigatorObservers: [routeObserver],
 
       home: FutureBuilder<String?>(
@@ -24,9 +31,12 @@ class MyApp extends StatelessWidget {
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             // While waiting for async data
-            return const Center(child: CircularProgressIndicator());
+            return const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(),
+              ),
+            );
           } else {
-            // After the future completes
             if (snapshot.hasData && snapshot.data != null) {
               // ✅ User already logged in → go to Dashboard
               return const Dashboard(loginDetails: null);

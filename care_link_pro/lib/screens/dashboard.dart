@@ -1,3 +1,4 @@
+import 'package:care_link_pro/screens/program_list.dart';
 import 'package:care_link_pro/screens/scan_generate.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
@@ -206,8 +207,17 @@ class _DashboardState extends State<Dashboard> with RouteAware {
     required int count,
   }) {
     return InkWell(
-      onTap: () => _onTileTapped(title),
-      borderRadius: BorderRadius.circular(16.0),
+onTap: () {
+  if (title == 'Programs') {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ProgramListScreen(),
+      ),
+    );
+  } else {
+    _onTileTapped(title);
+  }
+},      borderRadius: BorderRadius.circular(16.0),
       child: Container(
         padding: const EdgeInsets.all(16.0),
         decoration: BoxDecoration(
@@ -246,17 +256,17 @@ class _DashboardState extends State<Dashboard> with RouteAware {
             // Bottom Text: Tile title
             if (title == 'My Goals' || title == 'My Info' || title == 'Programs' || title == 'Appointments')
               Padding(
-                padding: const EdgeInsets.only(bottom: 20.0),
-                child: Text(
-                  title,
-                  style: const TextStyle(
-                    fontFamily: 'Poppins',
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.normal,
-                  ),
-                ),
-              )
+  padding: const EdgeInsets.only(bottom: 20.0),
+  child: Text(
+    title,
+    style: const TextStyle(
+      fontFamily: 'Poppins',
+      color: Colors.white,
+      fontSize: 18,
+      fontWeight: FontWeight.normal,
+    ),
+  ),
+)
             else
               Text(
                 title,

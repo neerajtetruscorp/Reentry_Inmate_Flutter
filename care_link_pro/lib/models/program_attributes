@@ -1,0 +1,34 @@
+class ProgramAttributes {
+  int? courseId;
+  String? programName;
+  String? programType;
+  String? startDateTime;
+  String? endDateTime;
+  String? assignedByType;
+  List<dynamic>? weekDay;
+  List<dynamic>? addresses;
+
+  ProgramAttributes({
+    this.courseId,
+    this.programName,
+    this.programType,
+    this.startDateTime,
+    this.endDateTime,
+    this.assignedByType,
+    this.weekDay,
+    this.addresses,
+  });
+
+  factory ProgramAttributes.fromJson(Map<String, dynamic> json) {
+    return ProgramAttributes(
+      courseId: json['courseId'],
+    programName: json['programName']?.toString(),
+    programType: json['programType']?.toString(),
+    startDateTime: json['startDateTime']?.toString(),
+    endDateTime: json['endDateTime']?.toString(),
+    assignedByType: json['assignedByType']?.toString(),
+      weekDay: json['weekDay'] != null ? List<dynamic>.from(json['weekDay']) : [],
+    addresses: json['addresses'] != null ? List<dynamic>.from(json['addresses']) : [],
+    );
+  }
+}

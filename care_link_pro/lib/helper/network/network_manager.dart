@@ -64,7 +64,7 @@ class NetworkManager {
       return false;
     }
 
-    final url = "https://yourdomain.com/api/refreshToken"; // 🔹 Replace with your actual refresh endpoint
+    final url = "http://dev-reentry.tetrus.dev/core/account/refresh-login"; // 🔹 Replace with your actual refresh endpoint
     final params = {"refreshToken": refreshToken};
 
     try {
@@ -117,9 +117,9 @@ class NetworkManager {
   // -------------------------------
   static Future<ApiResponse> get(String url) async {
     try {
-      if (url != _articleUrl) {
+      //if (url != _articleUrl) {
         await _checkAuthToken(); // 🔹 Only skip for login
-      }
+      //}
 
       print(url);
       final headers = await _headers();
@@ -165,25 +165,41 @@ class NetworkManager {
   // Handle Response
   // -------------------------------
   static ApiResponse _handleResponse(http.Response response) {
-    try {
-      final decoded = jsonDecode(response.body);
-      if (decoded is Map<String, dynamic>) {
-        return ApiResponse.fromJson(decoded);
-      } else {
-        return ApiResponse(
-          isSuccess: false,
-          error: 'Invalid response structure',
-          status: response.statusCode.toString(),
-          data: decoded,
-        );
-      }
-    } catch (e) {
+  try {
+    // 🔹 Print response for debugging
+    print("Status Code: ${response.statusCode}");
+    print("Response Body: ${response.body}");
+
+    // 🔹 Handle empty response
+    if (response.body.isEmpty) {
       return ApiResponse(
         isSuccess: false,
-        error: 'Failed to decode response: $e',
+        error: 'Empty response from server',
         status: response.statusCode.toString(),
-        data: response.body,
+        data: null,
       );
     }
+
+    final decoded = jsonDecode(response.body);
+
+    if (decoded is Map<String, dynamic>) {
+      return ApiResponse.fromJson(decoded);
+    } else {
+      return ApiResponse(
+        isSuccess: false,
+        error: 'Invalid response structure',
+        status: response.statusCode.toString(),
+        data: decoded,
+      );
+    }
+  } catch (e) {
+    return ApiResponse(
+      isSuccess: false,
+      error: 'Failed to decode response: $e',
+      status: response.statusCode.toString(),
+      data: response.body,
+    );
   }
+}
+  
 }
