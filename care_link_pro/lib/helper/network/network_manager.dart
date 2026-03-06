@@ -99,41 +99,50 @@ class NetworkManager {
   // -------------------------------
   // Dynamic Header Builder
   // -------------------------------
-  static Future<Map<String, String>> _headers() async {
-    final headers = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
+static Future<Map<String, String>> _headers() async {
+  final headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+    'X-current-datetime': getISO8601String(),
+  };
 
-    final token = await SharedPreferencesHelper.getString('token');
-    if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
-    }
-    return headers;
+  final token = await SharedPreferencesHelper.getString('token');
+  if (token != null && token.isNotEmpty) {
+    headers['Authorization'] = 'Bearer $token';
   }
+
+  return headers;
+}
+
+static String getISO8601String() {
+  final now = DateTime.now().toUtc();
+  return now.toIso8601String();
+}
 
   // -------------------------------
   // GET Request
   // -------------------------------
   static Future<ApiResponse> get(String url) async {
-    try {
-      //if (url != _articleUrl) {
-        await _checkAuthToken(); // 🔹 Only skip for login
-      //}
+  try {
+    await _checkAuthToken();
 
-      print(url);
-      final headers = await _headers();
-      final response = await http.get(Uri.parse(url), headers: headers);
-      return _handleResponse(response);
-    } catch (e) {
-      return ApiResponse(
-        isSuccess: false,
-        error: 'Network request failed: $e',
-        status: '503 SERVICE UNAVAILABLE',
-        data: null,
-      );
-    }
+    final headers = await _headers();
+
+    print("🌐 GET URL: $url");
+    print("📡 HEADERS: $headers");
+
+    final response = await http.get(Uri.parse(url), headers: headers);
+
+    return _handleResponse(response);
+  } catch (e) {
+    return ApiResponse(
+      isSuccess: false,
+      error: 'Network request failed: $e',
+      status: '503 SERVICE UNAVAILABLE',
+      data: null,
+    );
   }
+}
 
   // -------------------------------
   // POST Request
@@ -166,11 +175,9 @@ class NetworkManager {
   // -------------------------------
   static ApiResponse _handleResponse(http.Response response) {
   try {
-    // 🔹 Print response for debugging
-    print("Status Code: ${response.statusCode}");
-    print("Response Body: ${response.body}");
+    print("📥 Status Code: ${response.statusCode}");
+    print("📦 Raw Response: ${response.body}");
 
-    // 🔹 Handle empty response
     if (response.body.isEmpty) {
       return ApiResponse(
         isSuccess: false,
@@ -183,16 +190,24 @@ class NetworkManager {
     final decoded = jsonDecode(response.body);
 
     if (decoded is Map<String, dynamic>) {
-      return ApiResponse.fromJson(decoded);
-    } else {
-      return ApiResponse(
-        isSuccess: false,
-        error: 'Invalid response structure',
-        status: response.statusCode.toString(),
-        data: decoded,
-      );
+      final apiResponse = ApiResponse.fromJson(decoded);
+
+      if (!apiResponse.isSuccess) {
+        print("❌ API Error: ${apiResponse.error}");
+      }
+
+      return apiResponse;
     }
+
+    return ApiResponse(
+      isSuccess: false,
+      error: 'Unexpected response format',
+      status: response.statusCode.toString(),
+      data: decoded,
+    );
   } catch (e) {
+    print("❌ JSON Decode Error: $e");
+
     return ApiResponse(
       isSuccess: false,
       error: 'Failed to decode response: $e',

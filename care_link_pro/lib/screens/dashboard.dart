@@ -1,5 +1,6 @@
 import 'package:care_link_pro/screens/program_list.dart';
 import 'package:care_link_pro/screens/scan_generate.dart';
+import 'package:care_link_pro/screens/upcoming_uppointments.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import '../helper/network/network_manager.dart';
@@ -212,6 +213,12 @@ onTap: () {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ProgramListScreen(),
+      ),
+    );
+  } else if (title == 'Appointments') {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => UpcomingAppointmentsScreen(),
       ),
     );
   } else {
