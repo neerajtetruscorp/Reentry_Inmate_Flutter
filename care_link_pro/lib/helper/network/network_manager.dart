@@ -57,44 +57,59 @@ class NetworkManager {
     return true;
   }
 
+     static bool _isRefreshing = false;
+
   // Function to fetch new tokens using refreshToken (similar to Swift getAuthToken)
   static Future<bool> _getAuthToken(String? refreshToken) async {
-    if (refreshToken == null || refreshToken.isEmpty) {
-      print('❌ No refresh token available');
-      return false;
-    }
-
-    final url = "http://dev-reentry.tetrus.dev/core/account/refresh-login"; // 🔹 Replace with your actual refresh endpoint
-    final params = {"refreshToken": refreshToken};
-
-    try {
-      final response = await http.post(
-        Uri.parse(url),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode(params),
-      );
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        print('🔁 Token refreshed successfully: $data');
-
-        await SharedPreferencesHelper.saveString('token', data['idToken']);
-        await SharedPreferencesHelper.saveString('refresh_token', data['refreshToken']);
-        await SharedPreferencesHelper.saveInt('expire', data['expire']); // in milliseconds
-
-        return true;
-      } else {
-        print('❌ Failed to refresh token: ${response.statusCode}');
-        return false;
-      }
-    } catch (e) {
-      print('❌ Token refresh failed: $e');
-      return false;
-    }
+  if (_isRefreshing) {
+    print("⚠️ Token refresh already in progress...");
+    return true;
   }
+
+  _isRefreshing = true;
+
+  if (refreshToken == null || refreshToken.isEmpty) {
+    print('❌ No refresh token available');
+    _isRefreshing = false;
+    return false;
+  }
+
+  final url = "http://dev-reentry.tetrus.dev/core/account/refresh-login";
+  final params = {"refreshToken": refreshToken};
+
+  try {
+    final response = await http.post(
+      Uri.parse(url),
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-current-datetime': getISO8601String(),
+      },
+      body: jsonEncode(params),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      print('🔁 Token refreshed successfully');
+
+      await SharedPreferencesHelper.saveString('token', data['idToken']);
+      await SharedPreferencesHelper.saveString('refresh_token', data['refreshToken']);
+      await SharedPreferencesHelper.saveInt('expire', data['expire']);
+
+      _isRefreshing = false;
+      return true;
+    } else {
+      print('❌ Failed to refresh token: ${response.statusCode}');
+      _isRefreshing = false;
+      return false;
+    }
+  } catch (e) {
+    print('❌ Token refresh failed: $e');
+    _isRefreshing = false;
+    return false;
+  }
+}
 
   // -------------------------------
   // Dynamic Header Builder
