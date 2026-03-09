@@ -7,6 +7,7 @@ class LoginDetails {
   final String refId;
   final String tenantId;
   final int expire;
+  final String email;
 
 
   LoginDetails({
@@ -16,7 +17,9 @@ class LoginDetails {
     required this.lmsUserId,
     required this.refId,
     required this.tenantId,
-    required this.expire
+    required this.expire,
+    required this.email
+
   });
 
   factory LoginDetails.fromJson(Map<String, dynamic> json) {
@@ -27,7 +30,8 @@ class LoginDetails {
       lmsUserId: json['lmsUserId'] ?? '',
       refId: json['refId'] ?? '',
       tenantId: json['tenantId'] ?? '',
-      expire: json['expire'] ?? 0
+      expire: json['expire'] ?? 0,
+      email: json['email'] ?? ""
 
 
     );

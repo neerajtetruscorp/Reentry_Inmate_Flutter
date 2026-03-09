@@ -1,3 +1,4 @@
+import 'package:care_link_pro/models/user.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -5,6 +6,7 @@ import 'package:flutter/services.dart';
 import '../helper/helper.dart';
 import '../helper/network/network_manager.dart';
 import '../models/login.dart';
+import 'dart:convert';
 
 // Import the Dashboard Screen (navigated after successful login)
 import 'dashboard.dart';
@@ -167,20 +169,17 @@ class _LoginState extends State<Login> {
         SharedPreferencesHelper.saveString('token',loginDetails.idToken);
         SharedPreferencesHelper.saveString('refresh_token',loginDetails.refreshToken);
         SharedPreferencesHelper.saveInt('expire', loginDetails.expire);
+        SharedPreferencesHelper.saveString('email', loginDetails.email);
+
 
         print(loginDetails.idToken);
 
         // Login successful — navigate to Dashboard
         print(result.data.toString());
         print('✅ Login Successful! Navigating to Dashboard...');
-        SharedPreferencesHelper.saveString('login_successfull', _usernameController.text);
 
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => Dashboard(loginDetails: loginDetails),
-          ),
-        );
+await loadUserProfile();
+        
       } else {
         // Handle structured or unstructured error responses
         String message;
@@ -204,6 +203,73 @@ class _LoginState extends State<Login> {
       }
     }
   }
+
+
+
+ Future<void> loadUserProfile() async {
+  try {
+
+    const String kUserProfileUrl = "http://dev-reentry.tetrus.dev/core/api/v1/users/mobile/email/";
+
+
+    String? email = await SharedPreferencesHelper.getString('email');
+
+    if (email == null || email.isEmpty) {
+      print("❌ Email not found in storage");
+      return;
+    }
+
+    String url = "$kUserProfileUrl$email";
+
+    final result = await NetworkManager.get(url);
+
+    if (!mounted) return;
+
+    print("RESULT SUCCESS: ${result.isSuccess}");
+    print("RESULT DATA TYPE: ${result.data.runtimeType}");
+    print("RESULT DATA: ${result.data}");
+
+    if (result.isSuccess && result.data != null) {
+
+      final Map<String, dynamic> data =
+          result.data as Map<String, dynamic>;
+
+      User user = User.fromJson(data);
+
+     String userJson = jsonEncode(user.toJson());
+
+await SharedPreferencesHelper.saveString(
+  'user_object',
+  jsonEncode(user.toJson()),
+);
+
+      print("✅ User Name Login: ${user.firstName}");
+      print("✅ User Email Login: ${user.email}");
+
+
+        SharedPreferencesHelper.saveString('login_successfull', _usernameController.text);
+
+      Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => Dashboard(userDetails: user),
+          ),
+        );
+
+    } else {
+      print("❌ API ERROR: ${result.error}");
+    }
+
+  } catch (e) {
+    print("❌ EXCEPTION: $e");
+  }
+}
+
+
+
+
+
+
 
   // ===========================================================================
   // 🧱 WIDGET BUILDERS

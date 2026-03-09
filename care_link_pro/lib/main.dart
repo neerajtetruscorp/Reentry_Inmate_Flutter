@@ -39,7 +39,7 @@ class MyApp extends StatelessWidget {
           } else {
             if (snapshot.hasData && snapshot.data != null) {
               // ✅ User already logged in → go to Dashboard
-              return const Dashboard(loginDetails: null);
+              return const Dashboard(userDetails: null);
             } else {
               // 🚪 No saved login → go to Login screen
               return const Login();

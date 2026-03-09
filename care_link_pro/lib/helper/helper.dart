@@ -1,4 +1,6 @@
+import 'package:care_link_pro/models/user.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 class SharedPreferencesHelper {
   // ------------------------
@@ -26,6 +28,29 @@ class SharedPreferencesHelper {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getInt(key);
   }
+
+
+  static Future<User?> getSavedUser() async {
+  final prefs = await SharedPreferences.getInstance();
+
+  String? userString = prefs.getString('user_object');
+
+  print("Saved User Raw: $userString");
+
+  if (userString == null || userString.isEmpty) {
+    print("❌ No user found in SharedPreferences");
+    return null;
+  }
+
+  final decoded = jsonDecode(userString);
+
+  if (decoded == null) {
+    print("❌ Decoded JSON is null");
+    return null;
+  }
+
+  return User.fromJson(decoded as Map<String, dynamic>);
+}
 
   // ------------------------
   // Delete / Clear

@@ -1,0 +1,9 @@
+class Address {
+  Address();
+
+  factory Address.fromJson(Map<String, dynamic> json) {
+    return Address();
+  }
+
+  Map<String, dynamic> toJson() => {};
+}

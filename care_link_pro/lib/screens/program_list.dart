@@ -1,3 +1,5 @@
+import 'package:care_link_pro/helper/helper.dart';
+import 'package:care_link_pro/models/user.dart';
 import 'package:flutter/material.dart';
 import '../models/program.dart';
 import '../helper/network/network_manager.dart';
@@ -17,16 +19,38 @@ class _ProgramListScreenState extends State<ProgramListScreen> {
 
   int selectedTab = 0;
   String? _fetchError;
+   User? user;
 
   @override
   void initState() {
     super.initState();
-    loadPrograms();
+     loadUser();
+
+    
   }
+
+  Future<void> loadUser() async {
+  user = await SharedPreferencesHelper.getSavedUser();
+
+   if (user != null) {
+    print("User Name Dashboard: ${user!.firstName}");
+    print("User Email Dashboard: ${user!.email}");
+    loadPrograms();
+  } else {
+    print("❌ User is null");
+  }
+
+  setState(() {});
+}
 
   void loadPrograms() async {
     try {
-      final result = await NetworkManager.get(kProgramUrl);
+
+const String kUserprogUrl = "http://dev-reentry.tetrus.dev/inmate-svc/api/inmateprogram/programs/mobile/encounterId/5/lmsUserId/";
+  
+String url = "$kUserprogUrl${user?.encounterId.toString()}";
+  
+      final result = await NetworkManager.get(url);
 
       if (!mounted) return;
 

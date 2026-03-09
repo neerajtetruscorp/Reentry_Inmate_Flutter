@@ -76,15 +76,13 @@ class NetworkManager {
 
   final url = "http://dev-reentry.tetrus.dev/core/account/refresh-login";
   final params = {"refreshToken": refreshToken};
+  final headers = await _headers();
 
   try {
     final response = await http.post(
+
       Uri.parse(url),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'X-current-datetime': getISO8601String(),
-      },
+      headers: headers,
       body: jsonEncode(params),
     );
 
@@ -115,6 +113,7 @@ class NetworkManager {
   // Dynamic Header Builder
   // -------------------------------
 static Future<Map<String, String>> _headers() async {
+
   final headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',

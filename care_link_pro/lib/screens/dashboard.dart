@@ -1,3 +1,5 @@
+import 'package:care_link_pro/models/user.dart';
+import 'package:care_link_pro/screens/my_info.dart';
 import 'package:care_link_pro/screens/program_list.dart';
 import 'package:care_link_pro/screens/scan_generate.dart';
 import 'package:care_link_pro/screens/upcoming_uppointments.dart';
@@ -9,6 +11,7 @@ import '../models/dashboard_tiles_count.dart';
 import '../models/login.dart';
 import 'more.dart';
 import 'my_profile.dart';
+import '../helper/helper.dart';
 
 // ---------------------------
 // Constants
@@ -31,15 +34,17 @@ const String kBaseImageUrl = "http://dev-reentry.tetrus.dev/";
 
 final RouteObserver<PageRoute> routeObserver = RouteObserver<PageRoute>();
 
+
+
 /// Dashboard screen — the main landing screen after login.
 ///
 /// Displays quick stats (Programs, Appointments, Goals, My Info),
 /// a personalized greeting, articles fetched from backend API,
 /// and a bottom navigation bar for switching between tabs.
 class Dashboard extends StatefulWidget {
-  final LoginDetails? loginDetails; // ✅ nullable type
+  final User? userDetails; // ✅ nullable type
 
-  const Dashboard({Key? key, required this.loginDetails}) : super(key: key);
+  const Dashboard({Key? key, required this.userDetails}) : super(key: key);
 
   @override
   State<Dashboard> createState() => _DashboardState();
@@ -58,11 +63,14 @@ class _DashboardState extends State<Dashboard> with RouteAware {
   int _goalsCount = 0;
   int _infoCount = 0;
 
+   User? user;
+
   @override
   void initState() {
     super.initState();
     _fetchArticles();
     _tilesCounts();
+    loadUser();
   }
 
 
@@ -75,6 +83,18 @@ class _DashboardState extends State<Dashboard> with RouteAware {
     }
   }
 
+Future<void> loadUser() async {
+  user = await SharedPreferencesHelper.getSavedUser();
+
+   if (user != null) {
+    print("User Name Dashboard: ${user!.firstName}");
+    print("User Email Dashboard: ${user!.email}");
+  } else {
+    print("❌ User is null");
+  }
+
+  setState(() {});
+}
 
   @override
   void dispose() {
@@ -221,7 +241,15 @@ onTap: () {
         builder: (context) => UpcomingAppointmentsScreen(),
       ),
     );
-  } else {
+    
+  } else if (title == 'My Info') {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => MyInfoScreen(),
+      ),
+    );
+    
+  }else {
     _onTileTapped(title);
   }
 },      borderRadius: BorderRadius.circular(16.0),
@@ -517,19 +545,19 @@ onTap: () {
   ///
   /// In production, the name (e.g., "Jonathan") can be dynamic
   /// based on the logged-in user’s profile information.
-  Widget _buildGreeting() {
-    return const Padding(
-      padding: EdgeInsets.only(top: 24.0),
-      child: Text(
-        'Hello Jonathan!',
-        style: TextStyle(
-          fontFamily: 'Poppins',
-          fontSize: 20,
-          color: Colors.black87,
-        ),
+ Widget _buildGreeting() {
+  return Padding(
+    padding: const EdgeInsets.only(top: 24.0),
+    child: Text(
+      'Hello ${user?.firstName ?? "User"}!',
+      style: const TextStyle(
+        fontFamily: 'Poppins',
+        fontSize: 20,
+        color: Colors.black87,
       ),
-    );
-  }
+    ),
+  );
+}
 
   // ---------------------------------------------------------------------------
   // UI BUILDERS — BOTTOM NAVIGATION
